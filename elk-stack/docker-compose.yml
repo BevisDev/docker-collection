@@ -1,0 +1,128 @@
+networks:
+  elastic:
+volumes:
+  certs:
+  es01_data:
+  kibana_data:
+  logstash_data:
+
+services:
+  setup:
+    container_name: setup
+    image: docker.elastic.co/elasticsearch/elasticsearch:$STACK_VERSION
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs
+      - ./setup/instances.yml:/usr/share/elasticsearch/instances.yml:ro
+      - ./setup/setup.sh:/usr/share/elasticsearch/setup.sh
+    networks:
+      - elastic
+    environment:
+      - PATH_ES_CA_CERT=$PATH_ES_CA_CERT
+      - PATH_ES_CA_KEY=$PATH_ES_CA_KEY
+      - ES01_HOST=$ES01_HOST
+      - ELASTIC_USERNAME=$ELASTIC_USERNAME
+      - ELASTIC_PASSWORD=$ELASTIC_PASSWORD
+      - KIBANA_USERNAME=$KIBANA_USERNAME
+      - KIBANA_PASSWORD=$KIBANA_PASSWORD
+    user: root
+    command: bash -c '/usr/share/elasticsearch/setup.sh'
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f $PATH_ES01_CERT ]"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+
+  es01:
+    container_name: es01
+    depends_on:
+      setup:
+        condition: service_healthy
+    image: docker.elastic.co/elasticsearch/elasticsearch:$STACK_VERSION
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs
+      - es01_data:/usr/share/elasticsearch/data
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+    networks:
+      - elastic
+    ports:
+      - 9200:9200
+    restart: unless-stopped
+    environment:
+      - PATH_ES01_KEY=$PATH_ES01_KEY
+      - PATH_ES01_CERT=$PATH_ES01_CERT
+      - PATH_ES_CA_CERT=$PATH_ES_CA_CERT
+      - ELASTIC_PASSWORD=$ELASTIC_PASSWORD
+      - CLUSTER_NAME=$CLUSTER_NAME
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fs https://$ES01_HOST/_cluster/health -u $ELASTIC_USERNAME:$ELASTIC_PASSWORD --cacert $PATH_ES01_CERT",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  kibana:
+    container_name: kibana
+    depends_on:
+      - es01
+    image: docker.elastic.co/kibana/kibana:$STACK_VERSION
+    volumes:
+      - certs:/usr/share/kibana/config/certs
+      - kibana_data:/usr/share/kibana/data
+      - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+    networks:
+      - elastic
+    ports:
+      - 5601:5601
+    restart: unless-stopped
+    environment:
+      - PATH_KIBANA_CA_CERT=$PATH_KIBANA_CA_CERT
+      - KIBANA_USERNAME=$KIBANA_USERNAME
+      - KIBANA_PASSWORD=$KIBANA_PASSWORD
+      - ENCRYPTION_KEY=$ENCRYPTION_KEY
+      - ES01_HOST=$ES01_HOST
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fs https://$KIBANA_HOST --cacert $PATH_KIBANA_CA_CERT",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  logstash:
+    container_name: logstash
+    depends_on:
+      es01:
+        condition: service_healthy
+    image: docker.elastic.co/logstash/logstash:$STACK_VERSION
+    volumes:
+      - certs:/usr/share/logstash/config/certs
+      - logstash_data:/usr/share/logstash/data
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      # ingest data
+      - ./ingest_data:/usr/share/logstash/ingest_data
+    networks:
+      - elastic
+    environment:
+      - PATH_LOGSTASH_CA_CERT=$PATH_LOGSTASH_CA_CERT
+      - ES01_HOST=$ES01_HOST
+      - ELASTIC_USERNAME=$ELASTIC_USERNAME
+      - ELASTIC_PASSWORD=$ELASTIC_PASSWORD
+    restart: unless-stopped
+    ports:
+      - 9600:9600
+      - 5044:5044
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fs http://$LOGSTASH_HOST",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10

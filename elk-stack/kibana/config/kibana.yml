@@ -1,0 +1,25 @@
+# ======================== Kibana Configuration =========================
+# https://www.elastic.co/guide/index.html
+# ------------------------------------------------------------------------------
+server:
+  name: kibana
+  host: 0.0.0.0
+  maxPayload: 553247624
+
+savedObjects.maxImportPayloadBytes: 553247624
+
+# The path where Kibana stores persistent data not saved in Elasticsearch. Defaults to data
+path.data: /usr/share/kibana/data
+
+# =================== System: Elasticsearch ===================
+elasticsearch:
+  hosts: ["https://${ES01_HOST}"]
+  username: ${KIBANA_USERNAME}
+  password: ${KIBANA_PASSWORD}
+  ssl:
+    certificateAuthorities: ${PATH_KIBANA_CA_CERT}
+
+xpack.security.encryptionKey: ${ENCRYPTION_KEY}
+xpack.encryptedSavedObjects.encryptionKey: ${ENCRYPTION_KEY}
+xpack.reporting.encryptionKey: ${ENCRYPTION_KEY}
+xpack.security.session.idleTimeout: "1h"

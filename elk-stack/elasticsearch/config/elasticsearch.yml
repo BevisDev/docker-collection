@@ -1,0 +1,40 @@
+# ======================== Elasticsearch Configuration =========================
+# https://www.elastic.co/guide/en/elasticsearch/reference/index.html
+# ------------------------------------------------------------------------------
+cluster.name: ${CLUSTER_NAME}
+node.name: ${HOSTNAME}
+
+# Create a new cluster with the current node only
+# Additional nodes can still join the cluster later
+cluster.initial_master_nodes: ["${HOSTNAME}"]
+#discovery.seed_hosts: ["node01"]
+network.host: 0.0.0.0
+
+# Path to directory where to store the data (separate multiple locations by comma):
+path.data: /usr/share/elasticsearch/data
+# Path to log files:
+path.logs: /usr/share/elasticsearch/logs
+
+# Allow HTTP API connections from anywhere
+# Connections are encrypted and require user authentication
+http.host: 0.0.0.0
+bootstrap.memory_lock: true
+
+# Enable security features
+xpack.security.enabled: true
+xpack.security.enrollment.enabled: false
+xpack.monitoring.collection.enabled: true
+# Enable encryption for HTTP API client connections, such as Kibana, Logstash, and Agents
+xpack.security.http.ssl:
+  enabled: true
+  key: ${PATH_ES01_KEY}
+  certificate: ${PATH_ES01_CERT}
+  certificate_authorities: ${PATH_ES_CA_CERT}
+
+# Enable encryption and mutual authentication between cluster nodes
+xpack.security.transport.ssl:
+  enabled: true
+  key: ${PATH_ES01_KEY}
+  certificate: ${PATH_ES01_CERT}
+  certificate_authorities: ${PATH_ES_CA_CERT}
+  verification_mode: certificate

@@ -1,0 +1,12 @@
+http.host: 0.0.0.0
+node.name: logstash01
+path.data: /usr/share/logstash/data
+
+# ================== Xpack Monitoring
+# doc: https://www.elastic.co/guide/en/logstash/current/monitoring-internal-collection-legacy.html
+# xpack.monitoring.enabled: true
+# xpack.monitoring.elasticsearch:
+#   hosts: ["https://${ES01_HOST}"]
+#   username: "${ELASTIC_USERNAME}"
+#   password: "${ELASTIC_PASSWORD"
+#   ssl.certificate_authority: ${PATH_LOGSTASH_CA_CERT}
